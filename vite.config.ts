@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // Use relative paths for assets
+  base: '/omniswitcher-prototype/',  // Use absolute path for GitHub Pages
   test: {
     globals: true,
     environment: 'jsdom',
