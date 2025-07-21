@@ -28,7 +28,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc && vite build",
     "test": "vitest",
     "test:watch": "vitest watch",
     "typecheck": "tsc --noEmit",
