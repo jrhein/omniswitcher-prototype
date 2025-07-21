@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Star, Clock, X } from 'react-feather';
@@ -132,6 +132,9 @@ const SearchBar = () => {
   const [query, setQuery] = useState<string>('');
   const [isAIMode, setIsAIMode] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  
+  // Add input ref
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const suggestions: SearchResult[] = [
     {
@@ -183,20 +186,25 @@ const SearchBar = () => {
     setQuery('');
   };
 
-  const toggleMode = () => {
+  const handleModeToggle = () => {
     setIsAIMode(!isAIMode);
+    // Maintain focus after mode toggle
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   return (
     <SearchContainer $isOpen={isOpen}>
       <SearchHeader $isOpen={isOpen}>
-        <SearchInput>
+        <SearchInput onClick={handleModeToggle}>
           {isAIMode ? (
             <Star size={18} color="#611f69" />
           ) : (
             <Search size={18} color="#616061" />
           )}
           <Input
+            ref={inputRef}
             placeholder={isAIMode ? "Ask for anything" : "Search everywhere"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

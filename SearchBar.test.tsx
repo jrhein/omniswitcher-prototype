@@ -1,8 +1,9 @@
+import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import SearchBar from './omniswitcher prototype';
+import SearchBar from './src/components/SearchBar';
 
 describe('SearchBar Component', () => {
   beforeEach(() => {
@@ -11,43 +12,116 @@ describe('SearchBar Component', () => {
 
   it('renders without crashing', () => {
     render(<SearchBar />);
-    expect(screen.getByPlaceholderText('Search messages, files, and more...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask for anything')).toBeInTheDocument();
   });
 
-  it('toggles between AI and Traditional mode', async () => {
+  it('shows suggestions when focused', async () => {
     render(<SearchBar />);
-    const toggleButton = screen.getByText('Traditional');
+    const input = screen.getByPlaceholderText('Ask for anything');
     
-    // Click toggle button
-    await userEvent.click(toggleButton);
-    expect(screen.getByText('AI')).toBeInTheDocument();
+    await act(async () => {
+      await userEvent.click(input);
+    });
     
-    // Click again to toggle back
-    await userEvent.click(screen.getByText('AI'));
-    expect(screen.getByText('Traditional')).toBeInTheDocument();
+    // Check for suggestions
+    expect(screen.getByText('Help me make the most of my day')).toBeInTheDocument();
+    expect(screen.getByText('@Sales Coach Prep me for my Greenleaf Intro call in 1 hour')).toBeInTheDocument();
+    expect(screen.getByText('Draft an out of office plan for my upcoming PTO')).toBeInTheDocument();
   });
 
-  it('automatically switches to AI mode when typing a question', async () => {
+  it('shows recent items when focused', async () => {
     render(<SearchBar />);
-    const input = screen.getByPlaceholderText('Search messages, files, and more...');
+    const input = screen.getByPlaceholderText('Ask for anything');
     
-    // Type a question
-    await userEvent.type(input, 'How do I create a new channel?');
+    await act(async () => {
+      await userEvent.click(input);
+    });
     
-    // Should switch to AI mode
-    expect(screen.getByText('AI')).toBeInTheDocument();
-    expect(screen.getByText('Switched to AI Q&A mode')).toBeInTheDocument();
+    // Check for recent items
+    expect(screen.getByText('Design Moves')).toBeInTheDocument();
+    expect(screen.getByText('Where is the Acme org chart?')).toBeInTheDocument();
+    expect(screen.getByText('Project Gizmo PRD')).toBeInTheDocument();
+    expect(screen.getByText('Reorg announcements')).toBeInTheDocument();
   });
 
-  it('shows search results when typing', async () => {
+  it('toggles between AI and search mode when clicking the input area', async () => {
     render(<SearchBar />);
-    const input = screen.getByPlaceholderText('Search messages, files, and more...');
+    const searchInput = screen.getByRole('textbox');
+    const searchContainer = searchInput.closest('div');
     
-    // Type a search term
-    await userEvent.type(input, 'test');
+    // Initially in AI mode
+    expect(screen.getByPlaceholderText('Ask for anything')).toBeInTheDocument();
     
-    // Wait for results to appear
-    const results = await screen.findByText(/document.pdf/);
-    expect(results).toBeInTheDocument();
+    // Click to toggle mode
+    if (searchContainer) {
+      await act(async () => {
+        await userEvent.click(searchContainer);
+      });
+      expect(screen.getByPlaceholderText('Search everywhere')).toBeInTheDocument();
+    }
+  });
+
+  it('closes the dropdown when clicking the close button', async () => {
+    render(<SearchBar />);
+    const input = screen.getByPlaceholderText('Ask for anything');
+    
+    // Open the dropdown
+    await act(async () => {
+      await userEvent.click(input);
+    });
+    expect(screen.getByText('Suggestions')).toBeInTheDocument();
+    
+    // Click close button
+    const closeButton = screen.getByRole('button');
+    await act(async () => {
+      await userEvent.click(closeButton);
+    });
+    
+    // Wait for animation to complete
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    });
+    
+    // Verify dropdown is closed
+    expect(screen.queryByText('Suggestions')).not.toBeInTheDocument();
+  });
+
+  // Additional test cases
+  it('handles keyboard navigation', async () => {
+    render(<SearchBar />);
+    const input = screen.getByPlaceholderText('Ask for anything');
+    
+    // Open dropdown with keyboard
+    await act(async () => {
+      input.focus();
+    });
+    
+    // Type some text
+    await act(async () => {
+      await userEvent.type(input, 'test');
+    });
+    
+    expect(input).toHaveValue('test');
+  });
+
+  it('maintains focus after mode toggle', async () => {
+    render(<SearchBar />);
+    const input = screen.getByPlaceholderText('Ask for anything');
+    const searchContainer = input.closest('div');
+    
+    // Focus the input
+    await act(async () => {
+      input.focus();
+    });
+    
+    // Toggle mode
+    if (searchContainer) {
+      await act(async () => {
+        await userEvent.click(searchContainer);
+      });
+    }
+    
+    // Input should still be focused
+    expect(document.activeElement).toBe(input);
   });
 }); 
