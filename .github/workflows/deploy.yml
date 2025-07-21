@@ -35,6 +35,12 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Fix index.html
+        run: |
+          cd dist
+          sed -i 's|/main.js|./assets/main.js|g' index.html
+          cp index.html 404.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
