@@ -1,38 +1,54 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MessageSquare } from 'react-feather';
+import { Search, Star, Clock, X } from 'react-feather';
 
 // Types
 interface SearchResult {
-  type: 'ai' | 'channel' | 'message' | 'file';
+  type: 'suggestion' | 'recent';
+  icon?: React.ReactNode;
   content: string;
+  subtext?: string;
 }
 
-interface ToggleButtonProps {
-  $isAIMode: boolean;  // Using $ prefix to avoid DOM attribute warning
+interface SearchContainerProps {
+  $isOpen: boolean;
+}
+
+interface SearchHeaderProps {
+  $isOpen: boolean;
 }
 
 // Styled Components
-const SearchContainer = styled.div`
+const SearchContainer = styled.div<SearchContainerProps>`
   position: relative;
   width: 100%;
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
+  background: ${props => props.$isOpen ? '#fff' : 'transparent'};
+  border-radius: 8px;
+  box-shadow: ${props => props.$isOpen ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'};
+`;
+
+const SearchHeader = styled.div<SearchHeaderProps>`
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: ${props => props.$isOpen ? '1px solid #e8e8e8' : 'none'};
 `;
 
 const SearchInput = styled.div`
   display: flex;
   align-items: center;
+  flex: 1;
   background: #fff;
-  border: 1px solid #ddd;
+  border: 1px solid #e8e8e8;
   border-radius: 6px;
   padding: 8px 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 
   &:focus-within {
-    border-color: #1264A3;
-    box-shadow: 0 0 0 4px rgba(18,100,163,0.1);
+    border-color: #611f69;
+    box-shadow: 0 0 0 4px rgba(97,31,105,0.1);
   }
 `;
 
@@ -42,128 +58,197 @@ const Input = styled.input`
   outline: none;
   font-size: 15px;
   padding: 0 8px;
+  color: #1d1c1d;
+  
+  &::placeholder {
+    color: #616061;
+  }
 `;
 
-const ToggleButton = styled(motion.button)<ToggleButtonProps>`
-  background: ${props => props.$isAIMode ? '#1264A3' : '#f8f8f8'};
-  color: ${props => props.$isAIMode ? '#fff' : '#1d1c1d'};
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 13px;
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  padding: 4px;
+  margin-left: 8px;
   cursor: pointer;
+  color: #616061;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  
+  &:hover {
+    color: #1d1c1d;
+  }
 `;
 
-const ResultsDropdown = styled(motion.div)`
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  margin-top: 4px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  max-height: 400px;
-  overflow-y: auto;
+const ResultsContainer = styled(motion.div)`
+  padding: 12px 0;
 `;
 
-const Tooltip = styled(motion.div)`
-  position: absolute;
-  top: -40px;
-  right: 0;
-  background: #1d1c1d;
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 4px;
+const SectionTitle = styled.div`
+  padding: 0 16px 8px;
   font-size: 13px;
+  font-weight: 700;
+  color: #1d1c1d;
+`;
+
+const ResultItem = styled(motion.div)`
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  
+  &:hover {
+    background: #f8f8f8;
+  }
+`;
+
+const IconWrapper = styled.div`
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: #611f69;
+`;
+
+const ResultContent = styled.div`
+  flex: 1;
+`;
+
+const ResultTitle = styled.div`
+  font-size: 14px;
+  color: #1d1c1d;
+`;
+
+const ResultSubtext = styled.div`
+  font-size: 13px;
+  color: #616061;
+  margin-top: 2px;
 `;
 
 const SearchBar = () => {
   const [query, setQuery] = useState<string>('');
-  const [isAIMode, setIsAIMode] = useState<boolean>(false);
-  const [showTooltip, setShowTooltip] = useState<boolean>(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  
-  const detectSearchMode = (input: string): boolean => {
-    const questionPattern = /^(who|what|where|when|why|how)|.*\?$/i;
-    return questionPattern.test(input);
+  const [isAIMode, setIsAIMode] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  const suggestions: SearchResult[] = [
+    {
+      type: 'suggestion',
+      icon: <Star size={16} />,
+      content: 'Help me make the most of my day',
+    },
+    {
+      type: 'suggestion',
+      icon: <Star size={16} />,
+      content: '@Sales Coach Prep me for my Greenleaf Intro call in 1 hour',
+    },
+    {
+      type: 'suggestion',
+      icon: <Star size={16} />,
+      content: 'Draft an out of office plan for my upcoming PTO',
+    },
+  ];
+
+  const recentItems: SearchResult[] = [
+    {
+      type: 'recent',
+      icon: <Clock size={16} />,
+      content: 'Design Moves',
+    },
+    {
+      type: 'recent',
+      icon: <Clock size={16} />,
+      content: 'Where is the Acme org chart?',
+    },
+    {
+      type: 'recent',
+      icon: <Clock size={16} />,
+      content: 'Project Gizmo PRD',
+    },
+    {
+      type: 'recent',
+      icon: <Clock size={16} />,
+      content: 'Reorg announcements',
+    },
+  ];
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
   };
 
-  useEffect(() => {
-    if (query) {
-      const shouldBeAIMode = detectSearchMode(query);
-      if (shouldBeAIMode !== isAIMode) {
-        setIsAIMode(shouldBeAIMode);
-        setShowTooltip(true);
-        setTimeout(() => setShowTooltip(false), 3000);
-      }
-      
-      // Simulate fetching results
-      const mockResults: SearchResult[] = isAIMode ? 
-        [{ type: 'ai', content: `AI-powered answer for: ${query}` }] :
-        [
-          { type: 'channel', content: '#general' },
-          { type: 'message', content: 'Latest matching message' },
-          { type: 'file', content: 'document.pdf' }
-        ];
-      setResults(mockResults);
-    } else {
-      setResults([]);
-    }
-  }, [query, isAIMode]);
+  const handleClose = () => {
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  const toggleMode = () => {
+    setIsAIMode(!isAIMode);
+  };
 
   return (
-    <SearchContainer>
-      {showTooltip && (
-        <Tooltip
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-        >
-          Switched to {isAIMode ? 'AI Q&A' : 'Traditional'} mode
-        </Tooltip>
-      )}
-      
-      <SearchInput>
-        <Search size={18} color="#1d1c1d" />
-        <Input
-          placeholder="Search messages, files, and more..."
-          value={query}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-        />
-        <ToggleButton
-          $isAIMode={isAIMode}
-          onClick={() => setIsAIMode(!isAIMode)}
-          whileTap={{ scale: 0.95 }}
-        >
+    <SearchContainer $isOpen={isOpen}>
+      <SearchHeader $isOpen={isOpen}>
+        <SearchInput>
           {isAIMode ? (
-            <>
-              <MessageSquare size={14} />
-              AI
-            </>
+            <Star size={18} color="#611f69" />
           ) : (
-            'Traditional'
+            <Search size={18} color="#616061" />
           )}
-        </ToggleButton>
-      </SearchInput>
+          <Input
+            placeholder={isAIMode ? "Ask for anything" : "Search everywhere"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={handleInputFocus}
+          />
+        </SearchInput>
+        {isOpen && (
+          <CloseButton onClick={handleClose}>
+            <X size={20} />
+          </CloseButton>
+        )}
+      </SearchHeader>
 
       <AnimatePresence>
-        {results.length > 0 && (
-          <ResultsDropdown
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+        {isOpen && !query && (
+          <ResultsContainer
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {results.map((result, index) => (
-              <div key={index} style={{ padding: '8px 12px' }}>
-                {result.content}
-              </div>
+            <SectionTitle>Suggestions</SectionTitle>
+            {suggestions.map((item, index) => (
+              <ResultItem
+                key={`suggestion-${index}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <IconWrapper>{item.icon}</IconWrapper>
+                <ResultContent>
+                  <ResultTitle>{item.content}</ResultTitle>
+                  {item.subtext && <ResultSubtext>{item.subtext}</ResultSubtext>}
+                </ResultContent>
+              </ResultItem>
             ))}
-          </ResultsDropdown>
+
+            <SectionTitle style={{ marginTop: 16 }}>Recent</SectionTitle>
+            {recentItems.map((item, index) => (
+              <ResultItem
+                key={`recent-${index}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (suggestions.length + index) * 0.05 }}
+              >
+                <IconWrapper>{item.icon}</IconWrapper>
+                <ResultContent>
+                  <ResultTitle>{item.content}</ResultTitle>
+                  {item.subtext && <ResultSubtext>{item.subtext}</ResultSubtext>}
+                </ResultContent>
+              </ResultItem>
+            ))}
+          </ResultsContainer>
         )}
       </AnimatePresence>
     </SearchContainer>
