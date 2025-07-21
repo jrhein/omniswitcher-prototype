@@ -34,12 +34,18 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_BASE_URL: '/omniswitcher-prototype/'
 
-      - name: Fix index.html
+      - name: Prepare dist directory
         run: |
           cd dist
-          sed -i 's|/main.js|./assets/main.js|g' index.html
+          # Create .nojekyll file
+          touch .nojekyll
+          # Copy index.html to 404.html for SPA routing
           cp index.html 404.html
+          # Ensure all paths are relative
+          find . -type f -name "*.html" -exec sed -i 's|src="/|src="./|g' {} +
+          find . -type f -name "*.html" -exec sed -i 's|href="/|href="./|g' {} +
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
